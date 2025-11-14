@@ -1,10 +1,7 @@
 # Dependencies
-/frontend/node_modules
-/backend/node_modules
+/traffic-backend/node_modules
+/traffic-backend/node_modules
 
-# Build/Dist folders
-/frontend/dist
-/backend/dist
 
 # Environment variables
 .env
