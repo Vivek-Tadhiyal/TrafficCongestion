@@ -134,14 +134,11 @@ const handleSelectPlace = async (item) => {
   }
 };
 
-
-
-
-  const clearMarkers = () => {
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = []; // reset array
-    setStatus("All markers cleared.");
-  };
+const clearMarkers = () => {
+  markersRef.current.forEach(marker => marker.remove());
+  markersRef.current = []; // reset array
+  setStatus("All markers cleared.");
+};
 
 
 return (
@@ -167,7 +164,6 @@ return (
       />
 
     </div>
-
 
     <p>{status}</p>
   </div>
