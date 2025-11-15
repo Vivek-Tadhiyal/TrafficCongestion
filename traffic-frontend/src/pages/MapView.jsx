@@ -1,10 +1,11 @@
 // src/pages/MapView.jsx
 import "../styles/MapView.css";
+import { getTrafficFlow } from "../services/api";
 import SearchBar from "../components/SearchBar";
 import React, { useEffect, useRef, useState } from "react";
 import tt from "@tomtom-international/web-sdk-maps";
 import "@tomtom-international/web-sdk-maps/dist/maps.css"; // ensures CSS loads
-import { getTrafficFlow } from "../services/api";
+import TrafficSidebar from "../components/TrafficSidebar";
 
 export default function MapView() {
   const mapElement = useRef(null);
@@ -13,6 +14,9 @@ export default function MapView() {
   const markersRef = useRef([]);
 
   const [status, setStatus] = useState("Map loading...");
+  const [sidebarData, setSidebarData] = useState(null);
+  const [sidebarLocation, setSidebarLocation] = useState("");
+
 
   useEffect(() => {
     if (!process.env.REACT_APP_TOMTOM_API_KEY) {
@@ -42,88 +46,95 @@ export default function MapView() {
   }, []);
 
   // click handler: place marker & fetch flow data from backend
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+useEffect(() => {
+  const map = mapRef.current;
+  if (!map) return;
 
-    const handleMapClick = async (e) => {
-      const { lng, lat } = e.lngLat;
+  const handleMapClick = async (e) => {
+    const { lng, lat } = e.lngLat;
 
-      setStatus(`Fetching traffic flow for ${lat.toFixed(5)}, ${lng.toFixed(5)}...`);
+    setStatus(`Fetching traffic flow for ${lat.toFixed(5)}, ${lng.toFixed(5)}...`);
 
-      // Remove existing marker/popup
-      if (popupRef.current) {
-        popupRef.current.remove();
-        popupRef.current = null;
+    // CLEAR previous sidebar content
+    setSidebarData(null);
+
+    try {
+      const data = await getTrafficFlow(lat, lng);
+
+      // Update sidebar (SUCCESS)
+      setSidebarData(data);
+      setSidebarLocation(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+
+      setStatus("Traffic data loaded.");
+    } catch (err) {
+      console.error("Error fetching traffic flow:", err);
+
+      // Update sidebar (ERROR mode)
+      setSidebarData({
+        flowSegmentData: {
+          currentSpeed: "N/A",
+          freeFlowSpeed: "N/A",
+          roadClosure: "N/A",
+        }
+      });
+
+      setSidebarLocation("Error fetching traffic data");
+      setStatus("Error fetching traffic data.");
+    }
+  };
+
+  map.on("click", handleMapClick);
+
+  return () => map.off("click", handleMapClick);
+}, []);
+
+
+const handleSelectPlace = async (item) => {
+  const pos = item.position;
+  const { lat, lon } = pos;
+
+  // Move map to the selected location
+  mapRef.current.flyTo({
+    center: [lon, lat],
+    zoom: 14,
+    speed: 1
+  });
+
+  // Create marker
+  const marker = new tt.Marker()
+    .setLngLat([lon, lat])
+    .addTo(mapRef.current);
+
+  markersRef.current.push(marker);
+
+  setStatus(`Fetching traffic for ${item.address.freeformAddress}...`);
+
+  try {
+    const data = await getTrafficFlow(lat, lon);
+
+    // Update sidebar with traffic info
+    setSidebarData(data);
+    setSidebarLocation(item.address.freeformAddress);
+
+    setStatus(`Traffic data loaded for ${item.address.freeformAddress}`);
+  } catch (err) {
+    console.error("Traffic fetch error:", err);
+
+    // Show fallback error in sidebar
+    setSidebarData({
+      flowSegmentData: {
+        currentSpeed: "N/A",
+        freeFlowSpeed: "N/A",
+        roadClosure: "N/A"
       }
-
-      // Create a simple popup while loading
-      const loadingPopup = new tt.Popup({ offset: 10 })
-        .setLngLat([lng, lat])
-        .setHTML("<div>Loading traffic data...</div>")
-        .addTo(map);
-
-      try {
-        // call backend (which will call TomTom)
-        const data = await getTrafficFlow(lat, lng);
-
-        loadingPopup.remove();
-
-        // Prepare display content
-        const seg = data?.flowSegmentData;
-        const html = seg
-          ? `
-            <div style="min-width:200px">
-              <b>Traffic Flow</b><br/>
-              <b>Current Speed:</b> ${seg.currentSpeed ?? "N/A"} km/h<br/>
-              <b>Free Flow:</b> ${seg.freeFlowSpeed ?? "N/A"} km/h<br/>
-              <b>Confidence:</b> ${seg.confidence ?? "N/A"}<br/>
-              <b>Road Closure:</b> ${seg.roadClosure ? "Yes" : "No"}
-            </div>`
-          : "<div>No flow data returned</div>";
-
-        popupRef.current = new tt.Popup({ offset: 10 })
-          .setLngLat([lng, lat])
-          .setHTML(html)
-          .addTo(map);
-
-        setStatus("Traffic data loaded.");
-      } catch (err) {
-        loadingPopup.remove();
-        popupRef.current = new tt.Popup({ offset: 10 })
-          .setLngLat([lng, lat])
-          .setHTML(`<div style="color:red">Error fetching traffic data</div>`)
-          .addTo(map);
-        console.error("Error fetching traffic flow:", err);
-        setStatus("Error fetching traffic data. See console for details.");
-      }
-    };
-
-    map.on("click", handleMapClick);
-    // cleanup
-    return () => map.off("click", handleMapClick);
-  }, []);
-
-  const handleSelectPlace = (item) => {
-    const pos = item.position; // lat & lon
-
-    // Fly to location
-    mapRef.current.flyTo({
-      center: [pos.lon, pos.lat],
-      zoom: 14,
-      speed: 1
     });
 
-    // Place marker
-    const marker = new tt.Marker()
-      .setLngLat([pos.lon, pos.lat])
-      .addTo(mapRef.current);
-
-    markersRef.current.push(marker);
+    setSidebarLocation("Error fetching traffic data");
+    setStatus("Error fetching traffic data.");
+  }
+};
 
 
-    setStatus(`Centered map on: ${item.address.freeformAddress}`);
-  };
 
 
   const clearMarkers = () => {
@@ -142,14 +153,21 @@ return (
     </button>
 
     <div className="map-container">
-      {/* Map */}
+
       <div id="map" ref={mapElement} className="map-box" />
 
-      {/* Floating Search Bar */}
       <div className="searchbar-wrapper">
         <SearchBar onSelect={handleSelectPlace} />
       </div>
+
+      <TrafficSidebar
+        data={sidebarData}
+        locationName={sidebarLocation}
+        onClose={() => setSidebarData(null)}
+      />
+
     </div>
+
 
     <p>{status}</p>
   </div>
