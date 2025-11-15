@@ -1,4 +1,5 @@
 // src/pages/MapView.jsx
+import "../styles/MapView.css";
 import SearchBar from "../components/SearchBar";
 import React, { useEffect, useRef, useState } from "react";
 import tt from "@tomtom-international/web-sdk-maps";
@@ -133,37 +134,19 @@ export default function MapView() {
 
 
 return (
-  <div style={{ padding: 12 }}>
-    <h2>Live Traffic Map</h2>
+  <div className="map-page">
+    <h2 className="map-heading">Live Traffic Map</h2>
 
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={clearMarkers}
-        style={{
-          padding: "8px 12px",
-          marginBottom: "10px",
-          borderRadius: "4px",
-          cursor: "pointer",
-        }}
-      >
-        Clear Markers
-      </button>
+    <button className="clear-btn" onClick={clearMarkers}>
+      Clear Markers
+    </button>
 
-      <div
-        id="map"
-        ref={mapElement}
-        style={{ width: "100%", height: "80vh" }}
-      />
+    <div className="map-container">
+      {/* Map */}
+      <div id="map" ref={mapElement} className="map-box" />
 
-      {/* Search bar floating inside map */}
-      <div
-        style={{
-          position: "absolute",
-          top: 20,
-          left: 20,
-          zIndex: 1000
-        }}
-      >
+      {/* Floating Search Bar */}
+      <div className="searchbar-wrapper">
         <SearchBar onSelect={handleSelectPlace} />
       </div>
     </div>
@@ -171,7 +154,5 @@ return (
     <p>{status}</p>
   </div>
 );
-
-
 
 }

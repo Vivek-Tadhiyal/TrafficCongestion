@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { autocompleteSearch } from "../services/searchService";
+import "../styles/SearchBar.css";
 
 export default function SearchBar({ onSelect }) {
   const [query, setQuery] = useState("");
@@ -24,48 +25,29 @@ export default function SearchBar({ onSelect }) {
       } catch (err) {
         console.error("Autocomplete error:", err);
       }
-    }, 350); // wait 350ms before making the API call
+    }, 350);
   };
 
   return (
-    <div style={{ position: "absolute", top: 20, left: 20, zIndex: 1000 }}>
+    <div className="searchbar-container">
       <input
         type="text"
         placeholder="Search for a place..."
+        className="search-input"
         value={query}
         onChange={handleChange}
-        style={{
-          padding: "8px",
-          width: "260px",
-          borderRadius: "4px",
-          border: "1px solid #ccc"
-        }}
       />
 
       {suggestions.length > 0 && (
-        <div
-          style={{
-            background: "white",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            marginTop: "4px",
-            maxHeight: "200px",
-            overflowY: "auto",
-            width: "260px"
-          }}
-        >
+        <div className="suggestions-box">
           {suggestions.map((item) => (
             <div
               key={item.id}
+              className="suggestion-item"
               onClick={() => {
                 setQuery(item.address?.freeformAddress || "");
                 setSuggestions([]);
                 onSelect(item);
-              }}
-              style={{
-                padding: "8px",
-                cursor: "pointer",
-                borderBottom: "1px solid #eee"
               }}
             >
               {item.address?.freeformAddress}
