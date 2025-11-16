@@ -1,13 +1,13 @@
-// src/pages/MapView.jsx
-import "../styles/MapView.css";
-import { getTrafficFlow, getTrafficIncidents } from "../services/api";
+import "../styles/MapView.css"; // keep same styles
 import SearchBar from "../components/SearchBar";
-import React, { useEffect, useRef, useState } from "react";
-import tt from "@tomtom-international/web-sdk-maps";
-import "@tomtom-international/web-sdk-maps/dist/maps.css"; // ensures CSS loads
 import TrafficSidebar from "../components/TrafficSidebar";
+import { getTrafficFlow, getTrafficIncidents } from "../services/api";
+import tt from "@tomtom-international/web-sdk-maps";
+import "@tomtom-international/web-sdk-maps/dist/maps.css";
 
-export default function MapView() {
+import React, { useEffect, useRef, useState } from "react";
+
+export default function TrafficOverview() {
   const mapElement = useRef(null);
   const mapRef = useRef(null);
   const popupRef = useRef(null);
@@ -264,7 +264,7 @@ const clearIncidents = () => {
 
 return (
   <div className="map-page">
-    <h2 className="map-heading">Live Traffic Map</h2>
+    <h2 className="map-heading">Traffic Flow & Incidents</h2>
 
     <button className="clear-btn" onClick={clearMarkers}>
       Clear Markers
@@ -299,5 +299,4 @@ return (
     <p>{status}</p>
   </div>
 );
-
 }
