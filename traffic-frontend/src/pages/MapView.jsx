@@ -1,6 +1,6 @@
 // src/pages/MapView.jsx
 import "../styles/MapView.css";
-import { getTrafficFlow } from "../services/api";
+import { getTrafficFlow, getTrafficIncidents } from "../services/api";
 import SearchBar from "../components/SearchBar";
 import React, { useEffect, useRef, useState } from "react";
 import tt from "@tomtom-international/web-sdk-maps";
@@ -12,6 +12,8 @@ export default function MapView() {
   const mapRef = useRef(null);
   const popupRef = useRef(null);
   const markersRef = useRef([]);
+  const incidentsRef = useRef([]);
+
 
   const [status, setStatus] = useState("Map loading...");
   const [sidebarData, setSidebarData] = useState(null);
@@ -140,6 +142,125 @@ const clearMarkers = () => {
   setStatus("All markers cleared.");
 };
 
+// getting incident category
+function getIncidentType(category) {
+  const map = {
+    1: "Accident",
+    2: "Fog",
+    3: "Dangerous Conditions",
+    4: "Rain",
+    5: "Ice",
+    6: "Traffic Jam",
+    7: "Roadwork",
+    8: "Road Closure",
+    9: "Lane Closure",
+    10: "Road Hazard",
+    11: "Weather Hazard",
+    14: "Flooding",
+    16: "Other"
+  };
+  return map[category] || "Unknown";
+}
+
+
+//loading traffic incidents
+const loadIncidents = async () => {
+  console.log("loadIncidents called");
+
+  if (!mapRef.current) return;
+
+  setStatus("Loading incidents...");
+
+  // Clear old markers
+  incidentsRef.current.forEach(marker => marker.remove());
+  incidentsRef.current = [];
+
+  // Get map center
+  const center = mapRef.current.getCenter();
+  const lat = center.lat;
+  const lon = center.lng;
+
+  // Create a safe bbox around center (±0.05 degree)
+  const offset = 0.02; // approx 5–6 km
+  const bbox = [
+    lon - offset, // minLon
+    lat - offset, // minLat
+    lon + offset, // maxLon
+    lat + offset  // maxLat
+  ].join(",");
+
+    try {
+      console.log("Fetching:", bbox);
+
+      const data = await getTrafficIncidents(bbox);
+      const incidents = data.incidents || [];
+      
+    console.log("API incidents:", incidents);
+
+      incidents.forEach(inc => {
+    let incidentLon = null;
+    let incidentLat = null;
+    const geom = inc.geometry;
+
+    const category = inc.properties?.iconCategory;
+    const incidentType = getIncidentType(category);
+
+    if (geom.type === "Point") {
+      [incidentLon, incidentLat] = geom.coordinates;
+    } else if (geom.type === "LineString") {
+      [incidentLon, incidentLat] = geom.coordinates[0];
+    } else if (geom.type === "MultiLineString") {
+      [incidentLon, incidentLat] = geom.coordinates[0][0];
+    } else if (geom.type === "Polygon") {
+      [incidentLon, incidentLat] = geom.coordinates[0][0];
+    } else if (geom.type === "MultiPolygon") {
+      [incidentLon, incidentLat] = geom.coordinates[0][0][0];
+    }
+
+    if (incidentLon == null || incidentLat == null) return;
+
+    const marker = new tt.Marker({ color: "#d32f2f" })
+      .setLngLat([incidentLon, incidentLat])
+      .addTo(mapRef.current);
+
+    marker.getElement().style.cursor = "pointer";
+
+    
+    marker.getElement().addEventListener("click", (e) => {
+      e.stopPropagation();   // ← stops map click from firing
+      e.preventDefault();
+
+      console.log("incidentType:", incidentType);
+
+      setSidebarData({
+        ...inc,
+        incidentType
+      });
+
+      setSidebarLocation(incidentType);
+    });
+
+
+
+    incidentsRef.current.push(marker);
+  });
+
+
+    setStatus(`Loaded ${incidents.length} incidents.`);
+  } catch (err) {
+    console.error("Error loading incidents:", err);
+    setStatus("Failed to load incidents.");
+  }
+};
+
+//for clearing road incidents
+const clearIncidents = () => {
+  incidentsRef.current.forEach(marker => marker.remove());
+  incidentsRef.current = [];
+  setStatus("Incidents cleared.");
+};
+
+
 
 return (
   <div className="map-page">
@@ -148,6 +269,16 @@ return (
     <button className="clear-btn" onClick={clearMarkers}>
       Clear Markers
     </button>
+
+    <button className="clear-btn" onClick={loadIncidents}>
+      Load Traffic Incidents
+    </button>
+
+    <button className="clear-btn" onClick={clearIncidents}>
+    Clear Incidents
+    </button>
+
+
 
     <div className="map-container">
 

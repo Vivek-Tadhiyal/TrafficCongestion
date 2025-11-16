@@ -1,47 +1,83 @@
+/* Page background */
+body {
+background: #e5e5e7;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+
+
+/* Wrapper for entire page */
+.map-wrapper {
+  padding: 20px;
+  color: #3f4355;
+}
+
+/* Page title */
+.map-heading {
+  font-size: 24px;
+  color: #514242;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+/* Dark theme buttons */
+.clear-btn {
+  margin:1px;
+  padding: 10px 16px;
+  background: #2f2f38;
+  color: #e6e6e9;
+  border: 1px solid #3a3a45;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+  background: #3a3a45;
+  transform: translateY(-2px);
+}
+
+/* Map Container */
 .map-container {
   position: relative;
   width: 100%;
-  height: 80vh;
+  height: 75vh;
   border-radius: 10px;
   overflow: hidden;
-  margin-top: 10px;
-  box-shadow: 0px 0px 10px rgba(0,0,0,0.15);
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
 }
 
-/* Map div */
+/* Map Box */
 .map-box {
   width: 100%;
   height: 100%;
 }
 
-/* Floating search bar container */
+/* Searchbar floating over map */
 .searchbar-wrapper {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 1000;
+  top: 15px;
+  left: 15px;
+  z-index: 100;
+  padding: 0;         /* No padding */
+  background: none;   /* Remove white background */
+  border-radius: 0;
+  box-shadow: none;   /* Remove shadow */
 }
 
-/* Clear markers button */
-.clear-btn {
-  padding: 8px 14px;
-  border-radius: 5px;
-  cursor: pointer;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  margin-top: 10px;
-}
 
-.clear-btn:hover {
-  background-color: #0d47a1;
-}
-
-/* Page padding */
-.map-page {
-  padding: 20px;
-}
-
-.map-heading {
-  margin-bottom: 10px;
+/* Status text */
+.status-text {
+  margin-top: 12px;
+  color: #444;
+  font-size: 14px;
 }

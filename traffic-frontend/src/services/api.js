@@ -8,3 +8,10 @@ export const getTrafficFlow = async (lat, lon) => {
   const { data } = await axios.get(`${API_BASE}/traffic/flow?lat=${lat}&lon=${lon}`);
   return data;
 };
+
+export async function getTrafficIncidents(bbox) {
+  const response = await axios.get("/api/traffic/incidents", {
+    params: { bbox }
+  });
+  return response.data;
+}
