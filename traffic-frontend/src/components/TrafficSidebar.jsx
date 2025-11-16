@@ -4,11 +4,42 @@ export default function TrafficSidebar({ data, locationName, onClose }) {
   if (!data) return null;
 
   // =============================
-  // CASE 2: INCIDENT DATA
-  // (user clicked a traffic incident marker)
-  // This is detected by "incidentType" field
+  // CASE 3: ROUTE SUMMARY (Shortest Route Page)
   // =============================
-  console.log("they type is:",data.incidentType);
+  if (data.type === "route") {
+    return (
+      <div className="sidebar">
+        <div className="sidebar-title">Route Summary</div>
+
+        <div className="sidebar-info">
+          <span className="sidebar-label">Distance:</span>
+          {data.distance} km
+        </div>
+
+        <div className="sidebar-info">
+          <span className="sidebar-label">Travel Time (Traffic):</span>
+          {data.trafficTime} min
+        </div>
+
+        <div className="sidebar-info">
+          <span className="sidebar-label">No-Traffic Time:</span>
+          {data.noTrafficTime} min
+        </div>
+
+        <div className="sidebar-info">
+          <span className="sidebar-label">Traffic Delay:</span>
+          {data.delay} min
+        </div>
+
+        <button className="sidebar-close" onClick={onClose}>Close</button>
+      </div>
+    );
+  }
+
+  // =============================
+  // CASE 2: INCIDENT DATA
+  // =============================
+  console.log("they type is:", data.incidentType);
   if (data.incidentType) {
     return (
       <div className="sidebar">
@@ -41,12 +72,10 @@ export default function TrafficSidebar({ data, locationName, onClose }) {
         <button className="sidebar-close" onClick={onClose}>Close</button>
       </div>
     );
-  } 
-
+  }
 
   // =============================
   // CASE 1: TRAFFIC FLOW DATA
-  // (user clicked map or selected a place)
   // =============================
   if (data.flowSegmentData) {
     const seg = data.flowSegmentData;
@@ -79,7 +108,7 @@ export default function TrafficSidebar({ data, locationName, onClose }) {
   }
 
   // =============================
-  // FALLBACK (nothing valid)
+  // FALLBACK
   // =============================
   return null;
 }
