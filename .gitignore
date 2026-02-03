@@ -9,5 +9,10 @@
 
 /traffic-ml/venv
 
+*.pkl
+*.pdf
+__pycache__/
+*.pyc
+
 # Logs
 npm-debug.log*
