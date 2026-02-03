@@ -7,5 +7,7 @@
 .env
 .env.*
 
+/traffic-ml/venv
+
 # Logs
 npm-debug.log*
