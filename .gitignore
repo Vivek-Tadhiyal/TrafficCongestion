@@ -13,6 +13,7 @@
 *.pdf
 __pycache__/
 *.pyc
+*.csv
 
 # Logs
 npm-debug.log*
