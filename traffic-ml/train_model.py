@@ -51,7 +51,7 @@ df = df.merge(location_lookup, left_on='dstid', right_on='MOVEMENT_ID').rename(c
 # 3. FAST FEATURE ENGINEERING
 # ==========================================
 print("Calculating distances using Vectorization...")
-# ⚡ This line replaces the slow loop
+# This line replaces the slow loop
 df['distance_km'] = haversine_vectorized(df['src_lat'], df['src_lon'], df['dest_lat'], df['dest_lon'])
 
 # Filter essential columns
@@ -88,10 +88,10 @@ mae = mean_absolute_error(y_test, predictions)
 r2 = r2_score(y_test, predictions)
 
 print("="*30)
-print(f"✅ Training Complete.")
+print(f"Training Complete.")
 print(f"Average Error (MAE): {mae:.2f} seconds")
 print(f"Accuracy Score (R2): {r2:.2f} (Closer to 1.0 is better)")
 print("="*30)
 
 joblib.dump(model, 'traffic_model.pkl')
-print("💾 Model Saved.")
+print("Model Saved.")
