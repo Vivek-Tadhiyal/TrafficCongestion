@@ -7,6 +7,7 @@ import { getRoute } from "../services/api";
 import { autocompleteSearch } from "../services/searchService"; 
 
 import RouteSidebar from "../components/RouteSidebar";
+import { getPredictiveInsights } from "../services/insightService";
 
 import "../styles/MapView.css";
 import "../styles/MapRouting.css";
@@ -17,9 +18,17 @@ const AutocompleteInput = ({ label, placeholder, onSelect, onClear }) => {
   const [results, setResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const isSelecting = useRef(false); // used so that the dropdown disappears once a place is selected
+
   // Debouncing: We wait 500ms after the user stops typing before calling the API
   // This prevents hitting the TomTom API limit on every single keystroke
-  useEffect(() => {
+useEffect(() => {
+    // If the text changed because we clicked a dropdown item, skip the search!
+    if (isSelecting.current) {
+      isSelecting.current = false; // Reset the flag for the next time they type
+      return; 
+    }
+
     const delayDebounceFn = setTimeout(async () => {
       if (query.length > 2) {
         try {
@@ -38,13 +47,13 @@ const AutocompleteInput = ({ label, placeholder, onSelect, onClear }) => {
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
 
-  // Triggered when a user clicks a specific place from the dropdown list
   const handleSelect = (place) => {
-    // Show the readable address in the input field
+    // NEW: Set the flag to true BEFORE updating the query text
+    isSelecting.current = true; 
+    
     setQuery(place.address.freeformAddress || place.poi?.name || "Unknown Location");
     setShowDropdown(false);
     
-    // Extract the exact coordinates and pass them back to the parent component
     const { lat, lon } = place.position;
     onSelect(`${lat}, ${lon}`); 
   };
@@ -77,6 +86,7 @@ const AutocompleteInput = ({ label, placeholder, onSelect, onClear }) => {
 
       {showDropdown && results.length > 0 && (
         <ul className="autocomplete-dropdown" style={{
+          /* ... keep your existing inline CSS here ... */
           position: "absolute",
           top: "100%",
           left: 0,
@@ -123,6 +133,7 @@ const MapRouting = () => {
 
   const [routeInfo, setRouteInfo] = useState(null);
   const [sidebarData, setSidebarData] = useState(null);
+  const [selectedHour, setSelectedHour] = useState(new Date().getHours());
 
   // Initialize the TomTom map only once when the component mounts
   useEffect(() => {
@@ -161,50 +172,62 @@ const MapRouting = () => {
     map.current.fitBounds(bounds, { padding: 50 });
   };
 
-  const calculateRoute = async () => {
+const calculateRoute = async () => {
     if (!startCoords || !endCoords) {
       alert("Please select valid start and end locations from the dropdown.");
       return;
     }
 
-    // Split the saved string back into individual latitude and longitude variables
-    const [startLat, startLon] = startCoords.split(",");
-    const [endLat, endLon] = endCoords.split(",");
+    const [startLat, startLon] = startCoords.split(",").map(s => s.trim());
+    const [endLat, endLon] = endCoords.split(",").map(s => s.trim());
 
-    // Call the backend API using the parsed coordinates
-    const data = await getRoute(
-      startLat.trim(),
-      startLon.trim(),
-      endLat.trim(),
-      endLon.trim()
-    );
+    // Check if today is a weekend (0 = Sunday, 6 = Saturday)
+    // If you want users to predict for *future* days, you'd need a full Datepicker, 
+    // but for now, we'll check the current real-world day.
+    const isWeekend = [0, 6].includes(new Date().getDay());
 
-    if (!data.points) {
-      alert("No route returned.");
+    // FIRE BOTH APIS CONCURRENTLY
+    const [routeResult, mlResult] = await Promise.allSettled([
+      getRoute(startLat, startLon, endLat, endLon),
+      getPredictiveInsights(startLat, startLon, endLat, endLon, selectedHour, isWeekend)
+    ]);
+
+    // Handle TomTom Failure (Critical)
+    if (routeResult.status === "rejected" || !routeResult.value.points) {
+      alert("Failed to calculate route from TomTom.");
       return;
     }
 
-    placeMarkers(startLat.trim(), startLon.trim(), endLat.trim(), endLon.trim());
-    setRouteInfo(data);
-    drawRoute(data);
+    const routeData = routeResult.value;
+    placeMarkers(startLat, startLon, endLat, endLon);
+    setRouteInfo(routeData);
+    drawRoute(routeData);
 
-    // Format the API response for the Sidebar UI
-    const summary = data.summary;
+    // Handle ML Success/Failure (Non-Critical)
+    let aiPredictionMinutes = null;
+    if (mlResult.status === "fulfilled") {
+       // Convert Python's raw seconds prediction into rounded minutes
+       aiPredictionMinutes = Math.round(mlResult.value.predicted_travel_time_seconds / 60);
+    } else {
+       console.warn("AI Insight not available:", mlResult.reason);
+    }
+
+    const summary = routeData.summary;
+    
+    // Update Sidebar with BOTH datasets
     setSidebarData({
-      type: "route",
-      distance: (summary.lengthInMeters / 1000).toFixed(2),
-      trafficTime: Math.round(summary.travelTimeInSeconds / 60),
-      noTrafficTime: Math.round(summary.noTrafficTravelTimeInSeconds / 60),
-      historicTime: Math.round(summary.historicTrafficTravelTimeInSeconds / 60),
-      incidentTime: Math.round(summary.liveTrafficIncidentsTravelTimeInSeconds / 60),
-      delay: Math.round(summary.trafficDelayInSeconds / 60),
-      trafficLength: summary.trafficLengthInMeters,
-      startLocation: startCoords.trim(),
-      endLocation: endCoords.trim(),
-      startLat, startLon, endLat, endLon,
-      departureTime: summary.departureTime,
-      arrivalTime: summary.arrivalTime,
-    });
+          type: "route",
+          distance: (summary.lengthInMeters / 1000).toFixed(2),
+          trafficTime: Math.round(summary.travelTimeInSeconds / 60),
+          delay: Math.round(summary.trafficDelayInSeconds / 60),
+          
+          // RE-ADD THESE TWO:
+          freeFlowTime: Math.round(summary.noTrafficTravelTimeInSeconds / 60),
+          trafficLength: (summary.trafficLengthInMeters / 1000).toFixed(2),
+          
+          aiPrediction: aiPredictionMinutes,
+          selectedHour: selectedHour
+        });
   };
 
   const clearRoute = () => {
@@ -279,6 +302,22 @@ const MapRouting = () => {
           onSelect={(coords) => setEndCoords(coords)}
           onClear={() => setEndCoords("")}
         />
+    <div className="routing-input-box">
+              <label>Departure Time</label>
+              <select 
+                value={selectedHour} 
+                onChange={(e) => setSelectedHour(parseInt(e.target.value))}
+                style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value={new Date().getHours()}>Leave Now</option>
+                <option disabled>──────────</option>
+                {[...Array(24)].map((_, i) => (
+                  <option key={i} value={i}>
+                    {i === 0 ? "12:00 AM" : i < 12 ? `${i}:00 AM` : i === 12 ? "12:00 PM" : `${i - 12}:00 PM`}
+                  </option>
+                ))}
+              </select>
+            </div>
 
         <button className="route-btn" onClick={calculateRoute}>
           Find Route
