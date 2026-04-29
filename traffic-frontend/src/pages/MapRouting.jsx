@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import tt from "@tomtom-international/web-sdk-maps";
 import "@tomtom-international/web-sdk-maps/dist/maps.css";
 
-// Importing exactly as defined in your actual service files
 import { getRoute } from "../services/api"; 
 import { autocompleteSearch } from "../services/searchService"; 
 
@@ -25,7 +24,7 @@ const AutocompleteInput = ({ label, placeholder, onSelect, onClear }) => {
 useEffect(() => {
     // If the text changed because we clicked a dropdown item, skip the search!
     if (isSelecting.current) {
-      isSelecting.current = false; // Reset the flag for the next time they type
+      isSelecting.current = false; // Reset the flag for the next time
       return; 
     }
 
@@ -86,7 +85,7 @@ useEffect(() => {
 
       {showDropdown && results.length > 0 && (
         <ul className="autocomplete-dropdown" style={{
-          /* ... keep your existing inline CSS here ... */
+
           position: "absolute",
           top: "100%",
           left: 0,
@@ -203,7 +202,6 @@ const calculateRoute = async () => {
     setRouteInfo(routeData);
     drawRoute(routeData);
 
-    // Handle ML Success/Failure (Non-Critical)
     let aiPredictionMinutes = null;
     if (mlResult.status === "fulfilled") {
        // Convert Python's raw seconds prediction into rounded minutes
@@ -221,7 +219,6 @@ const calculateRoute = async () => {
           trafficTime: Math.round(summary.travelTimeInSeconds / 60),
           delay: Math.round(summary.trafficDelayInSeconds / 60),
           
-          // RE-ADD THESE TWO:
           freeFlowTime: Math.round(summary.noTrafficTravelTimeInSeconds / 60),
           trafficLength: (summary.trafficLengthInMeters / 1000).toFixed(2),
           
